@@ -793,3 +793,155 @@ Scope note:
 
 - The strongest apples-to-apples detector effectiveness claims are the two matched 10-image comparisons above.
 - Larger-run BPJDet-only statistics are included as supporting scale/coverage context, not as strict baseline-vs-baseline deltas.
+
+### Journal entry: full accuracy metrics across tuned variants (new)
+
+Why:
+
+- We wanted a single place with comprehensive classification metrics for all tuned versions evaluated so far.
+
+Evaluation protocol:
+
+1. Human labels source:
+- `outputs_hires_bpjdet_tuned3_val60_seed42/review/head_level_review_annotated.csv`
+
+2. Label filtering:
+- Keep rows where `human_label` is one of `EC`, `IFT`, `OFT` and `head_id` is numeric.
+
+3. Join key:
+- `basename(image_name or image_path) + head_id`
+
+4. Metrics reported per model:
+- `n_matched`
+- accuracy
+- balanced accuracy
+- macro precision / recall / F1
+- weighted precision / recall / F1
+- micro precision / recall / F1
+- per-class precision / recall / F1 (`EC`, `IFT`, `OFT`)
+- multiclass MCC
+- Cohen kappa
+- confusion matrix (rows=true, cols=pred in `EC/IFT/OFT` order)
+
+Important comparability note:
+
+- `tuned3_val60`, `tuned4_val60`, and `tuned4_ec_recall_val60` each evaluate on 398 labeled heads.
+- Earlier pilot outputs (`tuned`, `tuned2`, `hires_bpjdet`) overlap only 12 labeled heads, so they are useful as historical signals but not directly comparable in confidence.
+
+Aggregate metrics:
+
+| model | n_matched | accuracy | balanced_acc | macro_p | macro_r | macro_f1 | weighted_p | weighted_r | weighted_f1 | mcc | kappa |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tuned | 12 | 0.8333 | 0.6061 | 0.4444 | 0.6061 | 0.4667 | 0.9444 | 0.8333 | 0.8667 | 0.5222 | 0.4286 |
+| tuned2 | 12 | 0.8333 | 0.6061 | 0.4444 | 0.6061 | 0.4667 | 0.9444 | 0.8333 | 0.8667 | 0.5222 | 0.4286 |
+| tuned3_val60_seed42 | 398 | 0.7487 | 0.6556 | 0.7117 | 0.6556 | 0.6518 | 0.7705 | 0.7487 | 0.7423 | 0.5472 | 0.5381 |
+| tuned4_val60_seed42 | 398 | 0.7563 | 0.6684 | 0.7206 | 0.6684 | 0.6634 | 0.7788 | 0.7563 | 0.7505 | 0.5630 | 0.5537 |
+| tuned4_ec_recall_val60_seed42 | 398 | 0.7538 | 0.6670 | 0.7128 | 0.6670 | 0.6606 | 0.7759 | 0.7538 | 0.7486 | 0.5601 | 0.5509 |
+| hires_bpjdet | 12 | 1.0000 | 0.6667 | 0.6667 | 0.6667 | 0.6667 | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 1.0000 |
+
+Micro metrics note:
+
+- For all runs above, micro precision = micro recall = micro F1 = accuracy (multiclass single-label setting).
+
+Per-class precision / recall / F1 (`EC`, `IFT`, `OFT`):
+
+| model | EC (P/R/F1) | IFT (P/R/F1) | OFT (P/R/F1) |
+| --- | --- | --- | --- |
+| tuned | 0.0000 / 0.0000 / 0.0000 | 1.0000 / 0.8182 / 0.9000 | 0.3333 / 1.0000 / 0.5000 |
+| tuned2 | 0.0000 / 0.0000 / 0.0000 | 1.0000 / 0.8182 / 0.9000 | 0.3333 / 1.0000 / 0.5000 |
+| tuned3_val60_seed42 | 0.7500 / 0.3478 / 0.4752 | 0.8607 / 0.8571 / 0.8589 | 0.5246 / 0.7619 / 0.6214 |
+| tuned4_val60_seed42 | 0.7576 / 0.3623 / 0.4902 | 0.8678 / 0.8571 / 0.8624 | 0.5366 / 0.7857 / 0.6377 |
+| tuned4_ec_recall_val60_seed42 | 0.7353 / 0.3623 / 0.4854 | 0.8708 / 0.8531 / 0.8619 | 0.5323 / 0.7857 / 0.6346 |
+| hires_bpjdet | 0.0000 / 0.0000 / 0.0000 | 1.0000 / 1.0000 / 1.0000 | 1.0000 / 1.0000 / 1.0000 |
+
+Confusion matrices (rows=true, cols=pred; class order = `EC/IFT/OFT`):
+
+- tuned: `[[0,0,0],[0,9,2],[0,0,1]]`
+- tuned2: `[[0,0,0],[0,9,2],[0,0,1]]`
+- tuned3_val60_seed42: `[[24,15,30],[7,210,28],[1,19,64]]`
+- tuned4_val60_seed42: `[[25,15,29],[7,210,28],[1,17,66]]`
+- tuned4_ec_recall_val60_seed42: `[[25,14,30],[8,209,28],[1,17,66]]`
+- hires_bpjdet: `[[0,0,0],[0,11,0],[0,0,1]]`
+
+Delta summary vs tuned3 (`accuracy`, `macro_f1`, `EC recall`, `OFT precision`):
+
+| model | d_accuracy | d_macro_f1 | d_EC_recall | d_OFT_precision |
+| --- | ---: | ---: | ---: | ---: |
+| tuned | +0.0846 | -0.1852 | -0.3478 | -0.1913 |
+| tuned2 | +0.0846 | -0.1852 | -0.3478 | -0.1913 |
+| tuned4_val60_seed42 | +0.0075 | +0.0116 | +0.0145 | +0.0120 |
+| tuned4_ec_recall_val60_seed42 | +0.0050 | +0.0088 | +0.0145 | +0.0077 |
+| hires_bpjdet | +0.2513 | +0.0148 | -0.3478 | +0.4754 |
+
+Interpretation:
+
+1. Among the 398-head comparable runs, `tuned4_val60_seed42` remains best overall (highest accuracy, macro F1, MCC, and kappa).
+2. `tuned4_ec_recall_val60_seed42` is close, with similar EC recall gain over tuned3 but slightly lower overall macro F1.
+3. Early pilot runs (`tuned`, `tuned2`, `hires_bpjdet`) are not robust comparison baselines for model selection due to tiny overlap (`n=12`).
+
+### Journal entry: expanded statistical test battery (new)
+
+Why:
+
+- We wanted to run as many meaningful evaluation statistics as possible across current tuned variants, beyond basic accuracy/F1.
+
+What was run:
+
+1. Core classification metrics
+- accuracy, error rate, balanced accuracy
+- macro/weighted/micro precision, recall, F1
+- per-class precision/recall/F1/support for `EC`, `IFT`, `OFT`
+- confusion matrices (`EC/IFT/OFT` order)
+- multiclass MCC and Cohen kappa
+
+2. Probabilistic / calibration metrics
+- multiclass log loss
+- multiclass Brier score
+- ECE (10 bins)
+- top-2 accuracy
+- class prevalence and predicted class distribution
+
+3. Uncertainty intervals
+- 95% Wilson CI for accuracy
+- 95% bootstrap CI (2000 resamples, seed `20261012`) for accuracy and macro F1
+
+4. Pairwise significance tests (on the 398-head comparable runs)
+- exact McNemar test on disagreement counts
+- continuity-corrected McNemar chi-square
+- paired bootstrap CI for deltas (accuracy and macro F1)
+- permutation test p-value (10000 shuffles) for delta macro F1
+- Cohen’s h effect size for accuracy deltas
+
+Artifacts written:
+
+- `outputs/metrics/full_eval_20261012.json`
+- `outputs/metrics/full_eval_20261012.md`
+
+Key model-level summary (same evaluated labels as above):
+
+| model | n | accuracy | macro_f1 | mcc | log_loss | ece_10 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| tuned | 12 | 0.8333 | 0.4667 | 0.5222 | 0.4591 | 0.2989 |
+| tuned2 | 12 | 0.8333 | 0.4667 | 0.5222 | 0.4591 | 0.2989 |
+| tuned3_val60_seed42 | 398 | 0.7487 | 0.6518 | 0.3756 | 0.8151 | 0.1184 |
+| tuned4_val60_seed42 | 398 | 0.7563 | 0.6634 | 0.4006 | 0.8150 | 0.1259 |
+| tuned4_ec_recall_val60_seed42 | 398 | 0.7538 | 0.6606 | 0.3908 | 0.8151 | 0.1234 |
+| hires_bpjdet | 12 | 1.0000 | 0.6667 | 1.0000 | 0.4591 | 0.3620 |
+
+Pairwise statistical tests (398-head comparable runs):
+
+| pair | mcnemar_exact_p | permutation_p_macro_f1 | delta_accuracy | delta_macro_f1 |
+| --- | ---: | ---: | ---: | ---: |
+| tuned3 vs tuned4 | 0.2500 | 0.1868 | -0.0075 | -0.0116 |
+| tuned3 vs tuned4_ec_recall | 0.6250 | 0.2499 | -0.0050 | -0.0088 |
+| tuned4 vs tuned4_ec_recall | 1.0000 | 0.5038 | +0.0025 | +0.0028 |
+
+Interpretation:
+
+1. Directionally, tuned4 remains best on the 398-head set (small gains over tuned3 in accuracy/macro-F1/MCC).
+2. The gain magnitude is small; pairwise significance tests do not show strong evidence at conventional thresholds on this sample size.
+3. Tuned4 and tuned4_ec_recall are statistically very close; tuned4 has a slight practical edge in aggregate metrics.
+
+Method caveat:
+
+- Pilot models with `n=12` overlap (`tuned`, `tuned2`, `hires_bpjdet`) are included for completeness but should not be used as decisive evidence against the 398-head validation runs.
