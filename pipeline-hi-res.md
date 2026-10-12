@@ -945,3 +945,65 @@ Interpretation:
 Method caveat:
 
 - Pilot models with `n=12` overlap (`tuned`, `tuned2`, `hires_bpjdet`) are included for completeness but should not be used as decisive evidence against the 398-head validation runs.
+
+### Journal entry: baseline 0.5/0.5 replay on random-60 stored probabilities (new)
+
+Why:
+
+- We wanted to compare current tuned logic against the original single-threshold decision rule (`ec=0.5`, `inout=0.5`) on the exact same labeled 398-head subset.
+
+Sources:
+
+- Probabilities: `outputs_hires_bpjdet_tuned3_val60_seed42/predictions.jsonl`
+- Human labels: `outputs_hires_bpjdet_tuned3_val60_seed42/review/head_level_review_annotated.csv`
+
+Replay rule:
+
+1. Predict `EC` if `p_EC >= 0.5`
+2. Else predict `IFT` if `inout >= 0.5`
+3. Else predict `OFT`
+
+Where:
+
+- `p_EC = class_probs['EC']`
+- `inout = class_probs['IFT'] / (1 - p_EC)` when `1 - p_EC > 0`
+
+Evaluation set:
+
+- Matched labeled heads: 398 (same keying protocol as tuned3/tuned4 comparisons)
+
+Summary vs tuned3 and tuned4 on the same 398 keys:
+
+| model | n | accuracy | macro_f1 | mcc | log_loss | ece_10 | balanced_acc |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| replay_0505 | 398 | 0.7437 | 0.6638 | 0.5388 | 0.8151 | 0.1039 | 0.6685 |
+| tuned3_val60_seed42 | 398 | 0.7487 | 0.6518 | 0.3756 | 0.8151 | 0.1184 | 0.6556 |
+| tuned4_val60_seed42 | 398 | 0.7563 | 0.6634 | 0.4006 | 0.8150 | 0.1259 | 0.6684 |
+
+Replay per-class precision/recall/F1:
+
+| class | precision | recall | f1 |
+| --- | ---: | ---: | ---: |
+| EC | 0.5789 | 0.4783 | 0.5238 |
+| IFT | 0.8650 | 0.8367 | 0.8506 |
+| OFT | 0.5577 | 0.6905 | 0.6170 |
+
+Replay confusion matrix (rows=true, cols=pred, class order `EC/IFT/OFT`):
+
+- `[[33, 14, 22], [16, 205, 24], [8, 18, 58]]`
+
+Delta against tuned variants:
+
+1. replay vs tuned3
+- `delta_accuracy = -0.0050`
+- `delta_macro_f1 = +0.0120`
+
+2. replay vs tuned4
+- `delta_accuracy = -0.0126`
+- `delta_macro_f1 = +0.0004`
+
+Interpretation:
+
+1. The original 0.5/0.5 replay is competitive in macro-F1 on this subset (slightly above tuned3 and nearly tied with tuned4), but lower in raw accuracy than both tuned3 and tuned4.
+2. Tuned4 still provides the best overall accuracy among compared variants on this 398-head set.
+3. The replay result reinforces that threshold policy choice changes class tradeoffs (especially EC recall vs precision balance), so model-selection should continue to prioritize the full metric/test battery and not a single scalar.
